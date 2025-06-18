@@ -4,21 +4,23 @@ plugins {
     id "maven-publish"
     id "signing"
     id "io.github.gradle-nexus.publish-plugin" version "2.0.0"
-    id "com.diffplug.spotless" version "7.0.2"
+    id "com.diffplug.spotless" version "7.0.4"
     id "com.github.ben-manes.versions" version "0.52.0"
-    id "pl.allegro.tech.build.axion-release" version "1.18.16"
-    id "org.sonarqube" version "6.0.1.5171"
+    id "pl.allegro.tech.build.axion-release" version "1.18.18"
+    id "org.sonarqube" version "6.2.0.5505"
     id "com.adarshr.test-logger" version "4.0.0"
-    id "nebula.lint" version "20.5.6"
+    id "nebula.lint" version "20.6.2"
 }
 
 group "com.github.michaelruocco"
 
 ext {
-    slf4jVersion = "2.0.16"
-    lombokVersion = "1.18.36"
+    slf4jVersion = "2.0.17"
+    lombokVersion = "1.18.38"
 
-    junitVersion = "5.11.4"
+    junitPlatformVersion = "1.13.1"
+    junitVersion = "5.13.1"
+    mockitoVersion = "5.18.0"
 }
 
 scmVersion {
@@ -28,6 +30,10 @@ scmVersion {
     }
 }
 project.version = scmVersion.version
+
+configurations {
+    mockitoAgent
+}
 
 repositories {
     mavenCentral()
@@ -45,10 +51,16 @@ dependencies {
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
 
     testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junitPlatformVersion}"
+    testRuntimeOnly "org.junit.platform:junit-platform-engine:${junitPlatformVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter:${junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testImplementation "org.assertj:assertj-core:3.27.3"
-    testImplementation "org.mockito:mockito-core:5.15.2"
+    testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+
+    mockitoAgent("org.mockito:mockito-core:${mockitoVersion}") {
+        transitive = false
+    }
 }
 
 javadoc.options.addStringOption('Xdoclint:none', '-quiet')
@@ -56,6 +68,7 @@ javadoc.options.addStringOption('Xdoclint:none', '-quiet')
 tasks.withType(Test) {
     useJUnitPlatform()
     systemProperty "org.slf4j.simpleLogger.defaultLogLevel", "debug"
+    jvmArgs += "-javaagent:${configurations.mockitoAgent.asPath}"
 }
 
 testlogger {
@@ -64,7 +77,7 @@ testlogger {
 }
 
 jacoco {
-    toolVersion = "0.8.12"
+    toolVersion = "0.8.13"
 }
 
 jacocoTestReport {
