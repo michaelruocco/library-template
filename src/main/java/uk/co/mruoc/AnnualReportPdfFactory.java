@@ -3,7 +3,6 @@ package uk.co.mruoc;
 import org.openpdf.text.Chunk;
 import org.openpdf.text.Document;
 import org.openpdf.text.DocumentException;
-import org.openpdf.text.Element;
 import org.openpdf.text.Font;
 import org.openpdf.text.PageSize;
 import org.openpdf.text.Paragraph;
@@ -14,6 +13,7 @@ import org.openpdf.text.pdf.PdfWriter;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.MissingNode;
 
+import java.awt.Color;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +38,6 @@ public class AnnualReportPdfFactory implements PdfFactory {
         try (Document document = new Document(PageSize.A4)) {
             PdfWriter.getInstance(document, new NonClosingOutputStream(outputStream));
             document.open();
-            document.add(title());
 
             JsonNode steps = schema.path("steps");
 
@@ -50,11 +49,14 @@ public class AnnualReportPdfFactory implements PdfFactory {
                         ? data.get(i)
                         : MissingNode.getInstance();
 
+
+                var heading = new Paragraph(
+                        step.path("title").asString(),
+                        new Font(Font.HELVETICA, 12, Font.BOLD, new Color(0, 166, 166))
+                );
+                heading.setSpacingAfter(5f);
                 // Add the step heading.
-                document.add(new Paragraph(
-                        step.path("title").asText(),
-                        new Font(Font.HELVETICA, 16, Font.BOLD)
-                ));
+                document.add(heading);
 
                 // Render each property in this step.
                 JsonNode properties = stepSchema.path("properties");
@@ -64,7 +66,6 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
                     renderProperty(
                             document,
-                            propertyName,
                             properties.path(propertyName),
                             stepData.path(propertyName),
                             stepUiSchema.path(propertyName)
@@ -77,28 +78,20 @@ public class AnnualReportPdfFactory implements PdfFactory {
         }
     }
 
-    private Paragraph title() {
-        var title = new Paragraph("Annual Report Form");
-        title.setAlignment(Element.ALIGN_CENTER);
-        return title;
-    }
-
     private void renderProperty(
             Document document,
-            String propertyName,
             JsonNode propertySchema,
             JsonNode propertyData,
             JsonNode propertyUiSchema
     ) throws DocumentException {
 
         // Display the property's description if present.
-        String description = propertySchema.path("description").asText();
+        //String description = propertySchema.path("description").asText();
+        //if (!description.isBlank()) {
+            //document.add(new Paragraph(description));
+        //}
 
-        if (!description.isBlank()) {
-            document.add(new Paragraph(description));
-        }
-
-        String type = propertySchema.path("type").asText();
+        String type = propertySchema.path("type").asString();
 
         switch (type) {
             case "array" -> renderArrayProperty(
@@ -124,7 +117,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
         JsonNode itemsSchema = arraySchema.path("items");
 
         // An array of objects becomes a table.
-        if ("object".equals(itemsSchema.path("type").asText())) {
+        if ("object".equals(itemsSchema.path("type").asString())) {
 
             JsonNode properties = itemsSchema.path("properties");
             JsonNode itemUiSchema = arrayUiSchema.path("items");
@@ -145,9 +138,9 @@ public class AnnualReportPdfFactory implements PdfFactory {
             for (String fieldName : fieldNames) {
                 String title = properties.path(fieldName)
                         .path("title")
-                        .asText(fieldName);
+                        .asString(fieldName);
 
-                table.addCell(new PdfPCell(new Phrase(title)));
+                table.addCell(new PdfPCell(new Phrase(title, new Font(Font.HELVETICA, 10, Font.BOLD, new Color(89, 89, 89)))));
             }
 
             // Each array element becomes a row.
@@ -155,10 +148,8 @@ public class AnnualReportPdfFactory implements PdfFactory {
                 for (JsonNode item : arrayData) {
                     for (String fieldName : fieldNames) {
                         JsonNode value = item.path(fieldName);
-                        table.addCell(new PdfPCell(
-                                new Phrase(formatValue(
-                                        properties.path(fieldName), value))
-                        ));
+                        var formattedValue = formatValue(properties.path(fieldName), value);
+                        table.addCell(new PdfPCell(new Phrase(formattedValue, new Font(Font.HELVETICA, 10, Font.NORMAL, new Color(89, 89, 89)))));
                     }
                 }
             }
@@ -184,7 +175,6 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
             renderProperty(
                     document,
-                    fieldName,
                     properties.path(fieldName),
                     objectData.path(fieldName),
                     objectUiSchema.path(fieldName)
@@ -202,7 +192,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
         String formattedValue = formatValue(propertySchema, value);
 
-        document.add(new Paragraph(formattedValue));
+        document.add(new Paragraph(formattedValue, new Font(Font.HELVETICA, 10, Font.NORMAL, new Color(89, 89, 89))));
         document.add(Chunk.NEWLINE);
     }
 
@@ -211,12 +201,12 @@ public class AnnualReportPdfFactory implements PdfFactory {
             JsonNode schema
     ) throws DocumentException {
 
-        String title = schema.path("title").asText();
+        String title = schema.path("title").asString();
 
         if (!title.isBlank()) {
             document.add(new Paragraph(
                     title,
-                    new Font(Font.HELVETICA, 11, Font.BOLD)
+                    new Font(Font.HELVETICA, 10, Font.BOLD, new Color(89, 89, 89))
             ));
         }
     }
@@ -234,7 +224,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
             for (JsonNode option : options) {
                 if (option.has("const")
                         && option.path("const").equals(value)) {
-                    return option.path("title").asText(value.asText());
+                    return option.path("title").asString(value.asString());
                 }
             }
         }
@@ -243,7 +233,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
             return value.asBoolean() ? "Yes" : "No";
         }
 
-        return value.asText();
+        return value.asString();
     }
 
     private List<String> getFieldOrder(
@@ -254,7 +244,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
         if (uiOrder.isArray()) {
             for (JsonNode field : uiOrder) {
-                String name = field.asText();
+                String name = field.asString();
 
                 if (properties.has(name) && !result.contains(name)) {
                     result.add(name);

@@ -33,7 +33,7 @@
                 }
               }
             },
-            "title": "If you are submitting an annual report for a project or number of VPAs, please include the details of all VPAs",
+            "description": "If you are submitting an annual report for a project or number of VPAs, please include the details of all VPAs",
             "minItems": 1
           }
         }
