@@ -20,6 +20,18 @@ import java.util.List;
 
 public class AnnualReportPdfFactory implements PdfFactory {
 
+    private static final Color TEAL = new Color(0, 166, 166);
+    private static final Color TEXT = new Color(89, 89, 89);
+
+    private static final Font HEADING_FONT =
+            new Font(Font.HELVETICA, 12, Font.BOLD, TEAL);
+
+    private static final Font QUESTION_FONT =
+            new Font(Font.HELVETICA, 10, Font.BOLD, TEXT);
+
+    private static final Font BODY_FONT =
+            new Font(Font.HELVETICA, 10, Font.NORMAL, TEXT);
+
     @Override
     public void toPdf(RequestForm form, OutputStream outputStream) {
         try {
@@ -49,13 +61,11 @@ public class AnnualReportPdfFactory implements PdfFactory {
                         ? data.get(i)
                         : MissingNode.getInstance();
 
-
                 var heading = new Paragraph(
                         step.path("title").asString(),
-                        new Font(Font.HELVETICA, 12, Font.BOLD, new Color(0, 166, 166))
+                        HEADING_FONT
                 );
                 heading.setSpacingAfter(5f);
-                // Add the step heading.
                 document.add(heading);
 
                 // Render each property in this step.
@@ -140,7 +150,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
                         .path("title")
                         .asString(fieldName);
 
-                table.addCell(new PdfPCell(new Phrase(title, new Font(Font.HELVETICA, 10, Font.BOLD, new Color(89, 89, 89)))));
+                table.addCell(new PdfPCell(new Phrase(title, QUESTION_FONT)));
             }
 
             // Each array element becomes a row.
@@ -149,7 +159,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
                     for (String fieldName : fieldNames) {
                         JsonNode value = item.path(fieldName);
                         var formattedValue = formatValue(properties.path(fieldName), value);
-                        table.addCell(new PdfPCell(new Phrase(formattedValue, new Font(Font.HELVETICA, 10, Font.NORMAL, new Color(89, 89, 89)))));
+                        table.addCell(new PdfPCell(new Phrase(formattedValue, BODY_FONT)));
                     }
                 }
             }
@@ -192,7 +202,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
         String formattedValue = formatValue(propertySchema, value);
 
-        document.add(new Paragraph(formattedValue, new Font(Font.HELVETICA, 10, Font.NORMAL, new Color(89, 89, 89))));
+        document.add(new Paragraph(formattedValue, BODY_FONT));
         document.add(Chunk.NEWLINE);
     }
 
@@ -206,7 +216,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
         if (!title.isBlank()) {
             document.add(new Paragraph(
                     title,
-                    new Font(Font.HELVETICA, 10, Font.BOLD, new Color(89, 89, 89))
+                    QUESTION_FONT
             ));
         }
     }
