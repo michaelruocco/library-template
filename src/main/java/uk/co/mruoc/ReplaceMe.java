@@ -13,7 +13,7 @@ public class ReplaceMe {
 
     public String getValue(String input) {
         log.info("in get value");
-        return String.format("replace-me-%s", input);
+        return "replace-me-" + input;
     }
 
     public Instant getTime() {
