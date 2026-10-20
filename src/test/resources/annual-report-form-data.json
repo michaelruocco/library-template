@@ -1,0 +1,76 @@
+[
+  {
+    "projects": [
+      {
+        "gsid": "GS38818",
+        "title": "automation test annualReportPOA",
+        "registryLink": "https://staging-registry.goldstandard.org/projects/details/19940"
+      }
+    ]
+  },
+  {
+    "monitoringPeriod": {
+      "endDate": "2025-10-27",
+      "startDate": "2025-10-21"
+    },
+    "reportCompletionDate": "2026-10-20",
+    "verificationInProgress": true
+  },
+  {
+    "projectActivity": {
+      "projectInactiveReason": "test reason",
+      "projectActiveDuringPeriod": false
+    },
+    "projectProgressSummary": "some activities",
+    "grievanceMechanismChanged": true
+  },
+  {
+    "stakeholderEngagement": {
+      "stakeholderFeedbackEntries": [
+        {
+          "date": "2026-10-06",
+          "comment": "first comment",
+          "issueResolved": false,
+          "ownerResponse": "will do it later",
+          "expectedActions": "some action",
+          "responsiblePerson": "Joe Bloggs"
+        },
+        {
+          "date": "2026-10-01",
+          "comment": "some other comment",
+          "issueResolved": false,
+          "ownerResponse": "maybe",
+          "expectedActions": "do some stuff",
+          "responsiblePerson": "Jane Doe"
+        }
+      ],
+      "stakeholderFeedbackReceived": true
+    }
+  },
+  {
+    "extremeEvents": {
+      "extremeEventDetails": "some really extreme event details",
+      "extremeEventsOccurred": true
+    },
+    "legalDisputes": {
+      "legalDisputesDetails": "some legal dispute details",
+      "legalDisputesOccurred": true
+    },
+    "incidentReport": {
+      "incidentDetails": "some serious incident details",
+      "incidentOccurred": true
+    },
+    "projectUpdates": {
+      "projectUpdatesDetails": "had to change some stuff",
+      "projectUpdatesOccurred": true
+    },
+    "monitoringSummary": "this is my summary",
+    "lufParticipantUpdates": ""
+  },
+  {
+    "supportingDocumentsList": "we have lots of supporting docs"
+  },
+  {
+    "annualReportDeclarationAccepted": true
+  }
+]

@@ -49,6 +49,8 @@ dependencies {
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 
     implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    implementation "com.github.librepdf:openpdf:3.0.5"
+    implementation "tools.jackson.core:jackson-databind:3.2.3"
 
     testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junitVersion}"
@@ -57,6 +59,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testImplementation "org.assertj:assertj-core:3.27.7"
     testImplementation "org.mockito:mockito-core:${mockitoVersion}"
+    testImplementation "com.github.michaelruocco:file-loader:7.0.4"
 
     mockitoAgent("org.mockito:mockito-core:${mockitoVersion}") {
         transitive = false
