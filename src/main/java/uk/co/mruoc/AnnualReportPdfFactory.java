@@ -1,3 +1,4 @@
+
 package uk.co.mruoc;
 
 import org.openpdf.text.Chunk;
@@ -23,10 +24,10 @@ public class AnnualReportPdfFactory implements PdfFactory {
     private static final Color TEAL = new Color(0, 166, 166);
     private static final Color TEXT = new Color(89, 89, 89);
 
-    private static final Font HEADING_FONT =
+    private static final Font SECTION_FONT =
             new Font(Font.HELVETICA, 12, Font.BOLD, TEAL);
 
-    private static final Font QUESTION_FONT =
+    private static final Font HEADING_FONT =
             new Font(Font.HELVETICA, 10, Font.BOLD, TEXT);
 
     private static final Font BODY_FONT =
@@ -48,7 +49,11 @@ public class AnnualReportPdfFactory implements PdfFactory {
     ) throws DocumentException {
 
         try (Document document = new Document(PageSize.A4)) {
-            PdfWriter.getInstance(document, new NonClosingOutputStream(outputStream));
+            PdfWriter.getInstance(
+                    document,
+                    new NonClosingOutputStream(outputStream)
+            );
+
             document.open();
 
             JsonNode steps = schema.path("steps");
@@ -57,34 +62,93 @@ public class AnnualReportPdfFactory implements PdfFactory {
                 JsonNode step = steps.get(i);
                 JsonNode stepSchema = step.path("schema");
                 JsonNode stepUiSchema = step.path("uiSchema");
-                JsonNode stepData = i < data.size()
+
+                JsonNode stepData = data.isArray() && i < data.size()
                         ? data.get(i)
                         : MissingNode.getInstance();
 
-                var heading = new Paragraph(
+                Paragraph heading = new Paragraph(
                         step.path("title").asString(),
-                        HEADING_FONT
+                        SECTION_FONT
                 );
                 heading.setSpacingAfter(5f);
                 document.add(heading);
 
-                // Render each property in this step.
-                JsonNode properties = stepSchema.path("properties");
+                // Render ordinary and conditional properties.
+                renderSchemaContents(
+                        document,
+                        stepSchema,
+                        stepData,
+                        stepUiSchema
+                );
 
-                for (String propertyName :
-                        getFieldOrder(properties, stepUiSchema.path("ui:order"))) {
-
-                    renderProperty(
-                            document,
-                            properties.path(propertyName),
-                            stepData.path(propertyName),
-                            stepUiSchema.path(propertyName)
-                    );
-                }
-
-                // Space between sections.
                 document.add(Chunk.NEWLINE);
             }
+        }
+    }
+
+    /**
+     * Renders ordinary properties, then any matching if/then/else branch.
+     * This can be used for both the root step schema and nested object schemas.
+     */
+    private void renderSchemaContents(
+            Document document,
+            JsonNode schema,
+            JsonNode data,
+            JsonNode uiSchema
+    ) throws DocumentException {
+
+        renderProperties(
+                document,
+                schema.path("properties"),
+                data,
+                uiSchema
+        );
+
+        JsonNode ifSchema = schema.path("if");
+
+        if (!ifSchema.isMissingNode()) {
+            boolean matches = matchesSchema(ifSchema, data);
+
+            JsonNode branch = matches
+                    ? schema.path("then")
+                    : schema.path("else");
+
+            if (branch.isObject()) {
+                renderSchemaContents(
+                        document,
+                        branch,
+                        data,
+                        uiSchema
+                );
+            }
+        }
+    }
+
+    /**
+     * Renders properties in ui:order, followed by any remaining properties.
+     */
+    private void renderProperties(
+            Document document,
+            JsonNode properties,
+            JsonNode data,
+            JsonNode uiSchema
+    ) throws DocumentException {
+
+        if (!properties.isObject()) {
+            return;
+        }
+
+        for (String fieldName : getFieldOrder(
+                properties,
+                uiSchema.path("ui:order"))) {
+
+            renderProperty(
+                    document,
+                    properties.path(fieldName),
+                    data.path(fieldName),
+                    uiSchema.path(fieldName)
+            );
         }
     }
 
@@ -95,23 +159,28 @@ public class AnnualReportPdfFactory implements PdfFactory {
             JsonNode propertyUiSchema
     ) throws DocumentException {
 
-        // Display the property's description if present.
-        //String description = propertySchema.path("description").asText();
-        //if (!description.isBlank()) {
-            //document.add(new Paragraph(description));
-        //}
-
         String type = propertySchema.path("type").asString();
 
         switch (type) {
             case "array" -> renderArrayProperty(
-                    document, propertySchema, propertyData, propertyUiSchema);
+                    document,
+                    propertySchema,
+                    propertyData,
+                    propertyUiSchema
+            );
 
             case "object" -> renderObjectProperty(
-                    document, propertySchema, propertyData, propertyUiSchema);
+                    document,
+                    propertySchema,
+                    propertyData,
+                    propertyUiSchema
+            );
 
             default -> renderScalarProperty(
-                    document, propertySchema, propertyData);
+                    document,
+                    propertySchema,
+                    propertyData
+            );
         }
     }
 
@@ -128,7 +197,6 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
         // An array of objects becomes a table.
         if ("object".equals(itemsSchema.path("type").asString())) {
-
             JsonNode properties = itemsSchema.path("properties");
             JsonNode itemUiSchema = arrayUiSchema.path("items");
 
@@ -144,27 +212,36 @@ public class AnnualReportPdfFactory implements PdfFactory {
             PdfPTable table = new PdfPTable(fieldNames.size());
             table.setWidthPercentage(100);
 
-            // Column headings come from the item schema.
+            // Column headings.
             for (String fieldName : fieldNames) {
                 String title = properties.path(fieldName)
                         .path("title")
                         .asString(fieldName);
 
-                table.addCell(new PdfPCell(new Phrase(title, QUESTION_FONT)));
+                table.addCell(new PdfPCell(
+                        new Phrase(title, HEADING_FONT)
+                ));
             }
 
             // Each array element becomes a row.
             if (arrayData.isArray()) {
                 for (JsonNode item : arrayData) {
                     for (String fieldName : fieldNames) {
+                        JsonNode fieldSchema = properties.path(fieldName);
                         JsonNode value = item.path(fieldName);
-                        var formattedValue = formatValue(properties.path(fieldName), value);
-                        table.addCell(new PdfPCell(new Phrase(formattedValue, BODY_FONT)));
+
+                        table.addCell(new PdfPCell(
+                                new Phrase(
+                                        formatValue(fieldSchema, value),
+                                        BODY_FONT
+                                )
+                        ));
                     }
                 }
             }
 
             document.add(table);
+            document.add(Chunk.NEWLINE);
         }
     }
 
@@ -177,19 +254,13 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
         addPropertyTitle(document, objectSchema);
 
-        JsonNode properties = objectSchema.path("properties");
-
-        for (String fieldName : getFieldOrder(
-                properties,
-                objectUiSchema.path("ui:order"))) {
-
-            renderProperty(
-                    document,
-                    properties.path(fieldName),
-                    objectData.path(fieldName),
-                    objectUiSchema.path(fieldName)
-            );
-        }
+        // Also evaluates conditionals nested inside this object.
+        renderSchemaContents(
+                document,
+                objectSchema,
+                objectData,
+                objectUiSchema
+        );
     }
 
     private void renderScalarProperty(
@@ -200,9 +271,11 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
         addPropertyTitle(document, propertySchema);
 
-        String formattedValue = formatValue(propertySchema, value);
+        document.add(new Paragraph(
+                formatValue(propertySchema, value),
+                BODY_FONT
+        ));
 
-        document.add(new Paragraph(formattedValue, BODY_FONT));
         document.add(Chunk.NEWLINE);
     }
 
@@ -214,10 +287,10 @@ public class AnnualReportPdfFactory implements PdfFactory {
         String title = schema.path("title").asString();
 
         if (!title.isBlank()) {
-            document.add(new Paragraph(
-                    title,
-                    QUESTION_FONT
-            ));
+            Paragraph heading = new Paragraph(title, HEADING_FONT);
+            heading.setSpacingBefore(3f);
+            heading.setSpacingAfter(2f);
+            document.add(heading);
         }
     }
 
@@ -246,9 +319,149 @@ public class AnnualReportPdfFactory implements PdfFactory {
         return value.asString();
     }
 
+    /**
+     * Evaluates the common JSON Schema keywords needed for conditional
+     * rendering: type, const, enum, required, properties, allOf, anyOf,
+     * oneOf and not.
+     *
+     * This is a subset of JSON Schema validation, not a full implementation.
+     */
+    private boolean matchesSchema(JsonNode schema, JsonNode data) {
+
+        if (schema.has("type")
+                && !matchesType(schema.path("type"), data)) {
+            return false;
+        }
+
+        if (schema.has("const")
+                && !schema.path("const").equals(data)) {
+            return false;
+        }
+
+        JsonNode enumValues = schema.path("enum");
+
+        if (enumValues.isArray()) {
+            boolean found = false;
+
+            for (JsonNode option : enumValues) {
+                if (option.equals(data)) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                return false;
+            }
+        }
+
+        // Every field in "required" must exist on the object.
+        JsonNode required = schema.path("required");
+
+        if (required.isArray()) {
+            for (JsonNode field : required) {
+                if (!data.has(field.asString())) {
+                    return false;
+                }
+            }
+        }
+
+        // Every declared property schema must match if that property exists.
+        // As specified by JSON Schema, absent properties are not a mismatch.
+        JsonNode properties = schema.path("properties");
+
+        if (properties.isObject()) {
+            for (var entry : properties.properties()) {
+                String name = entry.getKey();
+
+                if (data.has(name)
+                        && !matchesSchema(
+                        entry.getValue(),
+                        data.path(name))) {
+                    return false;
+                }
+            }
+        }
+
+        JsonNode allOf = schema.path("allOf");
+
+        if (allOf.isArray()) {
+            for (JsonNode subSchema : allOf) {
+                if (!matchesSchema(subSchema, data)) {
+                    return false;
+                }
+            }
+        }
+
+        JsonNode anyOf = schema.path("anyOf");
+
+        if (anyOf.isArray()) {
+            boolean found = false;
+
+            for (JsonNode subSchema : anyOf) {
+                if (matchesSchema(subSchema, data)) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                return false;
+            }
+        }
+
+        JsonNode oneOf = schema.path("oneOf");
+
+        if (oneOf.isArray()) {
+            int matches = 0;
+
+            for (JsonNode subSchema : oneOf) {
+                if (matchesSchema(subSchema, data)) {
+                    matches++;
+                }
+            }
+
+            if (matches != 1) {
+                return false;
+            }
+        }
+
+        JsonNode not = schema.path("not");
+
+        if (not.isObject() && matchesSchema(not, data)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean matchesType(JsonNode typeSchema, JsonNode value) {
+
+        if (typeSchema.isArray()) {
+            for (JsonNode type : typeSchema) {
+                if (matchesType(type, value)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return switch (typeSchema.asString()) {
+            case "object" -> value.isObject();
+            case "array" -> value.isArray();
+            case "string" -> value.isString();
+            case "boolean" -> value.isBoolean();
+            case "number" -> value.isNumber();
+            case "integer" -> value.isIntegralNumber();
+            case "null" -> value.isNull();
+            default -> true;
+        };
+    }
+
     private List<String> getFieldOrder(
             JsonNode properties,
-            JsonNode uiOrder) {
+            JsonNode uiOrder
+    ) {
 
         List<String> result = new ArrayList<>();
 
@@ -264,6 +477,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
         properties.properties().forEach(entry -> {
             String name = entry.getKey();
+
             if (!result.contains(name)) {
                 result.add(name);
             }
