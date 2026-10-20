@@ -5,6 +5,7 @@ import org.openpdf.text.Chunk;
 import org.openpdf.text.Document;
 import org.openpdf.text.DocumentException;
 import org.openpdf.text.Font;
+import org.openpdf.text.Image;
 import org.openpdf.text.PageSize;
 import org.openpdf.text.Paragraph;
 import org.openpdf.text.Phrase;
@@ -22,16 +23,16 @@ import java.util.List;
 public class AnnualReportPdfFactory implements PdfFactory {
 
     private static final Color TEAL = new Color(0, 166, 166);
-    private static final Color TEXT = new Color(89, 89, 89);
+    private static final Color GREY = new Color(89, 89, 89);
 
     private static final Font SECTION_FONT =
             new Font(Font.HELVETICA, 12, Font.BOLD, TEAL);
 
     private static final Font HEADING_FONT =
-            new Font(Font.HELVETICA, 10, Font.BOLD, TEXT);
+            new Font(Font.HELVETICA, 10, Font.BOLD, GREY);
 
     private static final Font BODY_FONT =
-            new Font(Font.HELVETICA, 10, Font.NORMAL, TEXT);
+            new Font(Font.HELVETICA, 10, Font.NORMAL, GREY);
 
     @Override
     public void toPdf(RequestForm form, OutputStream outputStream) {
@@ -55,7 +56,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
             );
 
             document.open();
-
+            document.add(loadLogo());
             JsonNode steps = schema.path("steps");
 
             for (int i = 0; i < steps.size(); i++) {
@@ -71,7 +72,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
                         step.path("title").asString(),
                         SECTION_FONT
                 );
-                heading.setSpacingAfter(5f);
+                heading.setSpacingAfter(2f);
                 document.add(heading);
 
                 // Render ordinary and conditional properties.
@@ -211,16 +212,14 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
             PdfPTable table = new PdfPTable(fieldNames.size());
             table.setWidthPercentage(100);
+            table.setSpacingBefore(5f);
 
             // Column headings.
             for (String fieldName : fieldNames) {
                 String title = properties.path(fieldName)
                         .path("title")
                         .asString(fieldName);
-
-                table.addCell(new PdfPCell(
-                        new Phrase(title, HEADING_FONT)
-                ));
+                table.addCell(toCell(title, HEADING_FONT));
             }
 
             // Each array element becomes a row.
@@ -229,13 +228,8 @@ public class AnnualReportPdfFactory implements PdfFactory {
                     for (String fieldName : fieldNames) {
                         JsonNode fieldSchema = properties.path(fieldName);
                         JsonNode value = item.path(fieldName);
-
-                        table.addCell(new PdfPCell(
-                                new Phrase(
-                                        formatValue(fieldSchema, value),
-                                        BODY_FONT
-                                )
-                        ));
+                        var formattedValue = formatValue(fieldSchema, value);
+                        table.addCell(toCell(formattedValue, BODY_FONT));
                     }
                 }
             }
@@ -243,6 +237,15 @@ public class AnnualReportPdfFactory implements PdfFactory {
             document.add(table);
             document.add(Chunk.NEWLINE);
         }
+    }
+
+    private PdfPCell toCell(String value, Font font) {
+        var cell = new PdfPCell(new Phrase(value, font));
+        cell.setBorderColor(GREY);
+        cell.setBorderWidth(0.25f);
+        cell.setPadding(3f);
+        cell.setPaddingBottom(6f);
+        return cell;
     }
 
     private void renderObjectProperty(
@@ -288,8 +291,7 @@ public class AnnualReportPdfFactory implements PdfFactory {
 
         if (!title.isBlank()) {
             Paragraph heading = new Paragraph(title, HEADING_FONT);
-            heading.setSpacingBefore(3f);
-            heading.setSpacingAfter(2f);
+            //heading.setSpacingAfter(5f);
             document.add(heading);
         }
     }
@@ -484,5 +486,21 @@ public class AnnualReportPdfFactory implements PdfFactory {
         });
 
         return result;
+    }
+
+    private Image loadLogo() {
+        try (var inputStream = getClass().getResourceAsStream("/logo.png")) {
+            if (inputStream == null) {
+                throw new PdfException("Logo not found on classpath: logo.png");
+            }
+
+            Image logo = Image.getInstance(inputStream.readAllBytes());
+
+            // Maximum dimensions, preserving the logo's aspect ratio.
+            logo.scaleToFit(160f, 60f);
+            return logo;
+        } catch (java.io.IOException | DocumentException e) {
+            throw new PdfException("Failed to load PDF logo", e);
+        }
     }
 }
