@@ -14,20 +14,8 @@ public class PdfStyles {
     private static final Font HEADING_FONT = new Font(Font.HELVETICA, 10, Font.BOLD, GREY);
     private static final Font BODY_FONT = new Font(Font.HELVETICA, 10, Font.NORMAL, GREY);
 
-    private Color sectionHeadingColor() {
-        return TEAL;
-    }
-
-    private Color textColor() {
-        return GREY;
-    }
-
     public Color tableBorderColor() {
         return GREY;
-    }
-
-    private Font sectionHeadingFont() {
-        return SECTION_HEADING_FONT;
     }
 
     public Font headingFont() {

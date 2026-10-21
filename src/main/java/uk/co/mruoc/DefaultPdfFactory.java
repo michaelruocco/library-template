@@ -20,13 +20,13 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.MissingNode;
 
 @RequiredArgsConstructor
-public class RequestFormPdfFactory implements PdfFactory {
+public class DefaultPdfFactory implements PdfFactory {
 
     private final PdfImage logo;
     private final DateTimeFormatter dateFormatter;
     private final PdfStyles styles;
 
-    public RequestFormPdfFactory() {
+    public DefaultPdfFactory() {
         this(new PdfImage(), DateTimeFormatter.ofPattern("dd/MM/yyyy"), new PdfStyles());
     }
 

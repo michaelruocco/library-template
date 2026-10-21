@@ -14,11 +14,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import uk.co.mruoc.file.FileLoader;
 
-public class RequestFormPdfFactoryTest {
+public class DefaultPdfFactoryTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final PdfFactory factory = new RequestFormPdfFactory();
+    private final PdfFactory factory = new DefaultPdfFactory();
 
     @Test
     void shouldCreatePdf() throws IOException {
