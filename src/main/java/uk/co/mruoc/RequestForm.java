@@ -1,15 +1,21 @@
 package uk.co.mruoc;
 
+import java.time.ZonedDateTime;
+import java.util.Optional;
 import lombok.Builder;
 import tools.jackson.databind.JsonNode;
 
-import java.time.ZonedDateTime;
-import java.util.Optional;
-
 @Builder(toBuilder = true)
-public record RequestForm(Integer id, Integer requestId, FormDefinition definition, JsonNode data,
-                          RequestFormStatus status, ZonedDateTime createdAt, ZonedDateTime updatedAt,
-                          ZonedDateTime submittedAt, String submittedBy) {
+public record RequestForm(
+        Integer id,
+        Integer requestId,
+        FormDefinition definition,
+        JsonNode data,
+        RequestFormStatus status,
+        ZonedDateTime createdAt,
+        ZonedDateTime updatedAt,
+        ZonedDateTime submittedAt,
+        String submittedBy) {
 
     public boolean isSubmitted() {
         return Optional.ofNullable(status).map(RequestFormStatus::isSubmitted).orElse(false);
@@ -31,5 +37,3 @@ public record RequestForm(Integer id, Integer requestId, FormDefinition definiti
         return definition.schema();
     }
 }
-
-

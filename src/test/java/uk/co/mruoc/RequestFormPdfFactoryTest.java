@@ -1,9 +1,6 @@
 package uk.co.mruoc;
 
-import org.junit.jupiter.api.Test;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import uk.co.mruoc.file.FileLoader;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.FilterOutputStream;
 import java.io.IOException;
@@ -12,15 +9,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import uk.co.mruoc.file.FileLoader;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-
-public class AnnualReportPdfFactoryTest {
+public class RequestFormPdfFactoryTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final PdfFactory factory = new AnnualReportPdfFactory();
+    private final PdfFactory factory = new RequestFormPdfFactory();
 
     @Test
     void shouldCreatePdf() throws IOException {
@@ -28,7 +26,7 @@ public class AnnualReportPdfFactoryTest {
         Files.createDirectories(outputPath.getParent());
         var form = buildForm();
         try (var fileStream = Files.newOutputStream(outputPath);
-             var outputStream = new TrackingOutputStream(fileStream)) {
+                var outputStream = new TrackingOutputStream(fileStream)) {
             factory.toPdf(form, outputStream);
             assertThat(outputStream.isClosed()).isFalse();
         }
